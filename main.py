@@ -12,6 +12,7 @@ class MyApp:
 
     def main(self, page: ft.Page):
         page.title = "Flet Auth System"
+        page.bgcolor=ft.Colors="Blue"
         page.window_width = 400
         page.window_height = 700
 
