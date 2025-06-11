@@ -4,11 +4,11 @@ from pages.login_page import LoginPage
 from pages.register_page import RegisterPage
 from pages.home_page import HomePage
 
-from services.auth_services import AuthService,ConnectionPool  
-pool = ConnectionPool(maxsize=10)
+from services.auth_services import AuthService
+
 class MyApp:
     def __init__(self):
-        self.auth_service = AuthService(pool)
+        self.auth_service = AuthService()
 
     def main(self, page: ft.Page):
         page.title = "Flet Auth System"
