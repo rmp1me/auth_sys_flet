@@ -6,6 +6,8 @@ from pages.home_page import HomePage
 
 from services.auth_services import AuthService,ConnectionPool  
 pool = ConnectionPool(maxsize=10)
+
+
 class MyApp:
     def __init__(self):
         self.auth_service = AuthService(pool)
@@ -13,8 +15,9 @@ class MyApp:
     def main(self, page: ft.Page):
         page.title = "Flet Auth System"
         page.bgcolor=ft.Colors="Blue"
-        page.window_width = 400
-        page.window_height = 700
+        page.theme_mode="Black"
+        page.window_width = 375
+        page.window_height = 812
 
         def route_change(route):
             page.views.clear()
