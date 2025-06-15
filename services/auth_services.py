@@ -1,78 +1,44 @@
-import pg8000
-import hashlib
-from queue import Queue
-from threading import Lock
+import os
+import json
+import pyrebase
+from dotenv import load_dotenv
 
-
-class ConnectionPool:
-    def __init__(self, maxsize=10):
-        self.pool = Queue(maxsize)
-        self.lock = Lock()
-        for _ in range(maxsize):
-            conn = pg8000.connect(
-                user="postgres",
-                password="admin",
-                host="localhost",
-                database="postgres",
-                port=5432
-            )
-            self.pool.put(conn)
-
-    def get_connection(self):
-        return self.pool.get()
-
-    def return_connection(self, conn):
-        self.pool.put(conn)
-
+load_dotenv()
 
 class AuthService:
-    def __init__(self, pool):
-        self.pool = pool
+    def __init__(self):
+        firebase_config = json.loads(os.getenv("FIREBASE_CONFIG"))
+        # Initialize Firebase inside constructor
+        firebase = pyrebase.initialize_app(firebase_config)
+        self.auth = firebase.auth()
+        print(self.auth)
 
-    def hash_password(self, password):
-        return hashlib.sha256(password.encode()).hexdigest()
-
-    def register(self, username, password):
-        conn = self.pool.get_connection()
+    def register(self, email, password):
         try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM auth_user_reg WHERE username = %s", (username,))
-            if cursor.fetchone():
-                cursor.close()
-                return False, "Username already exists."
-
-            hashed_password = self.hash_password(password)
-            cursor.execute(
-                "INSERT INTO auth_user_reg (username, password) VALUES (%s, %s)",
-                (username, hashed_password)
-            )
-            conn.commit()
-            cursor.close()
+            self.auth.create_user_with_email_and_password(email, password)
             return True, "Registration successful!"
         except Exception as e:
-            print("Registration error:", e)
-            return False, "Registration failed."
-        finally:
-            self.pool.return_connection(conn)
+            error_message = self.extract_error(e)
+            return False, f"Registration failed: {error_message}"
 
-    def login(self, username, password):
-        conn = self.pool.get_connection()
+    def login_google(self, email, password):
         try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT password FROM auth_user_reg WHERE username = %s", (username,))
-            row = cursor.fetchone()
-            cursor.close()
-
-            if row:
-                stored_hashed_password = row[0]
-                entered_hashed_password = self.hash_password(password)
-
-                if stored_hashed_password == entered_hashed_password:
-                    return True, "Login successful"
-
-            return False, "Invalid credentials"
+            print("Trying to login by google...!")
+            self.auth.sign_in_with_email_and_password(email, password)
+            return True, "Login successful"
         except Exception as e:
-            print("Login error:", e)
-            return False, "Login failed due to server error"
-        finally:
-            self.pool.return_connection(conn)
+            error_message = self.extract_error(e)
+            return False, f"Login failed"
+
+    def extract_error(self, error):
+        # Attempt to extract detailed Firebase error message
+        try:
+            return error.args[1]['error']['message']
+        except:
+            return str(error)
+    def send_password_reset_email(self, email):
+        try:
+            self.auth.send_password_reset_email(email)
+            return True, "Password reset email sent successfully."
+        except Exception as e:
+            return False, f"Failed to send reset email: {e}"

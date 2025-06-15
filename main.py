@@ -1,36 +1,38 @@
 import flet as ft
-
 from pages.login_page import LoginPage
 from pages.register_page import RegisterPage
 from pages.home_page import HomePage
-
-from services.auth_services import AuthService,ConnectionPool  
-pool = ConnectionPool(maxsize=10)
-
+from services.auth_services import AuthService
+from dotenv import load_dotenv
+load_dotenv()
 
 class MyApp:
     def __init__(self):
-        self.auth_service = AuthService(pool)
+        self.auth_service = AuthService()
 
     def main(self, page: ft.Page):
+        # Basic window setup
         page.title = "Flet Auth System"
-        page.bgcolor=ft.Colors="Blue"
-        page.theme_mode="Black"
-        page.window_width = 375
-        page.window_height = 812
+        page.window_width = 480
+        page.window_height = 350
+        page.bgcolor = "#0D1B2A"  # Dark blue background
+
+        # Routing logic
+        routes = {
+            "/": lambda: LoginPage(page, self.auth_service).view,
+            "/register": lambda: RegisterPage(page, self.auth_service).view,
+            "/home": lambda: HomePage(page).view,
+        }
 
         def route_change(route):
             page.views.clear()
-            if page.route == "/":
-                page.views.append(LoginPage(page, self.auth_service).view)
-            elif page.route == "/register":
-                page.views.append(RegisterPage(page, self.auth_service).view)
-            elif page.route == "/home":
-                page.views.append(HomePage(page).view)
+            page.views.append(routes.get(page.route, lambda: ft.View("/"))())
             page.update()
 
         page.on_route_change = route_change
         page.go(page.route)
 
-app = MyApp()
-ft.app(target=app.main)
+# Start the app
+if __name__ == "__main__":
+    app = MyApp()
+    ft.app(target=app.main)
